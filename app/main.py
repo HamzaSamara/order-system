@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 
-app = FastAPI(title="Order Processing System New")
+from app.database import init_db
+
+init_db()
+
+app = FastAPI(title="Order Processing System")
 
 
 @app.get("/")
