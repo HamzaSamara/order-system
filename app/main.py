@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException
 
 from app.database import get_connection, init_db
 
@@ -41,3 +42,13 @@ def list_orders():
     with get_connection() as conn:
         rows = conn.execute("SELECT * FROM orders ORDER BY id").fetchall()
     return [dict(row) for row in rows]
+
+
+
+@app.get("/orders/{order_id}")
+def get_order(order_id: int):
+    with get_connection() as conn:
+        row = conn.execute('select * from orders where id = ?', (order_id,)).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return dict(row)
