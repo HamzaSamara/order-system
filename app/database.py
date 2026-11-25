@@ -1,10 +1,14 @@
 import os
-from sqlalchemy.orm import Session
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
 from app.models import Base
 
-DATABASE_PATH = os.getenv("DATABASE_PATH", "orders.db")
-DATABASE_URL = f"sqlite:///{DATABASE_PATH}"
+load_dotenv()
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///orders.db")
 
 engine = create_engine(DATABASE_URL)
 
