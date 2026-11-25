@@ -1,8 +1,9 @@
+from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from fastapi import FastAPI, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-from app.database import engine, init_db
+
+from app.database import get_db, init_db
 from app.models import Order
 
 init_db()
@@ -14,6 +15,7 @@ class OrderCreate(BaseModel):
     customer_name: str = Field(min_length=1, max_length=50)
     product: str = Field(min_length=1)
     quantity: int = Field(gt=0, le=100)
+
 
 def order_to_dict(order):
     return {
@@ -38,35 +40,32 @@ def health():
 
 
 @app.post("/orders", status_code=201)
-def create_order(order: OrderCreate):
-    with Session(engine) as session:
-        new_order = Order(
-            customer_name = order.customer_name,
-            product = order.product,
-            quantity = order.quantity
-        )
-        session.add(new_order)
-        session.commit()
-        return order_to_dict(new_order)
+def create_order(order: OrderCreate, db: Session = Depends(get_db)):
+    new_order = Order(
+        customer_name = order.customer_name,
+        product = order.product,
+        quantity = order.quantity
+    )
+    db.add(new_order)
+    db.commit()
+    return order_to_dict(new_order)
 
 
 @app.get("/orders")
-def list_orders():
-    with Session(engine) as session:
-        orders = session.execute(select(Order).order_by(Order.id)).scalars().all()
-        result = []
-        for i in orders:
-            result.append(order_to_dict(i))
-        return result
+def list_orders(db: Session = Depends(get_db)):
+    orders = db.execute(select(Order).order_by(Order.id)).scalars().all()
+    result = []
+    for i in orders:
+        result.append(order_to_dict(i))
+    return result
 
 
 
 @app.get("/orders/{order_id}")
-def get_order(order_id: int):
-    with Session(engine) as session:
-        order = session.get(Order, order_id)
-        if order is None:
-            raise HTTPException(status_code=404, detail="Order not found")
-        return order_to_dict(order)
+def get_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    return order_to_dict(order)
 
 
