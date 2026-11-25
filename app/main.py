@@ -2,6 +2,8 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from typing import Literal
+
 
 from app.database import get_db, init_db
 from app.models import Order
@@ -16,6 +18,8 @@ class OrderCreate(BaseModel):
     product: str = Field(min_length=1)
     quantity: int = Field(gt=0, le=100)
 
+class OrderStatusUpdate(BaseModel):
+    status: Literal["pending", "completed", "cancelled"]
 
 def order_to_dict(order):
     return {
@@ -68,4 +72,22 @@ def get_order(order_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Order not found")
     return order_to_dict(order)
 
+
+@app.delete("/orders/{order_id}", status_code=204)
+def delete_order(order_id: int, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    db.delete(order)
+    db.commit()
+
+
+@app.patch("/orders/{order_id}")
+def update_order_status(order_id: int, update: OrderStatusUpdate, db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+    if order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    order.status = update.status
+    db.commit()
+    return order_to_dict(order)
 
